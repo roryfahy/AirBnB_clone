@@ -15,12 +15,24 @@ class BaseModel:
 
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Create new instance of BaseModel"""
-
-        self.id = str(uuid.uuid4())
-        self.created_at = datetime.datetime.now()
-        self.updated_at = datetime.datetime.now()
+        if len(kwargs) == 0:
+            self.id = str(uuid.uuid4())
+            self.created_at = datetime.datetime.now()
+            self.updated_at = datetime.datetime.now()
+        else:
+            del(kwargs['__class__'])
+            kwargs['created_at'] = datetime.datetime.strptime(
+                kwargs['created_at'],
+                '%Y-%m-%dT%H:%M:%S.%f'
+            )
+            kwargs['updated_at'] = datetime.datetime.strptime(
+                kwargs['updated_at'],
+                '%Y-%m-%dT%H:%M:%S.%f'
+            )
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
     def __str__(self):
         """Return the instance's ID, class name, and attributes as a string"""

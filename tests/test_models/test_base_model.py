@@ -3,6 +3,7 @@
 
 
 import datetime
+from itertools import chain
 from models.base_model import BaseModel
 import unittest
 import uuid
@@ -64,3 +65,33 @@ class TestBase (unittest.TestCase):
             b.save()
             now = datetime.datetime.now()
             self.assertTrue(old < b.updated_at < now)
+
+    def test_fromdict(self):
+        """Test that instances can be created from a given dictionary"""
+
+        d = BaseModel().to_dict()
+        b = BaseModel(**d)
+        with self.subTest(msg='check for \'__class__\' in new instance'):
+            self.assertNotIsInstance(b.__class__, str)
+        del d['__class__']
+        with self.subTest(msg='check all/proper attributes are passed'):
+            for key in d.keys():
+                self.assertTrue(hasattr(b, key))
+        d['created_at'] = datetime.datetime.strptime(
+            d['created_at'],
+            '%Y-%m-%dT%H:%M:%S.%f'
+        )
+        d['updated_at'] = datetime.datetime.strptime(
+            d['updated_at'],
+            '%Y-%m-%dT%H:%M:%S.%f'
+        )
+        with self.subTest(msg='check if correct values are set in new inst'):
+            for key, value in d.items():
+                self.assertEqual(value, getattr(b, key))
+        with self.subTest(msg='check if positional args are ignored'):
+            d = BaseModel().to_dict()
+            c = BaseModel('dfsa', 'sfsd', **d)
+            e = BaseModel('dfsa', 'sfsd')
+            for value in chain(c.__dict__.values(), e.__dict__.values()):
+                self.assertNotEqual('dfsa', value)
+                self.assertNotEqual('sfsd', value)
