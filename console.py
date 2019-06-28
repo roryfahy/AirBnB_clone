@@ -22,6 +22,16 @@ class HBNBCommand (cmd.Cmd):
 
         super().__init__(*args, **kwargs)
         self.prompt = '(hbnb) '
+        self.__classes = self.__getModels()
+
+    def __getModels(self):
+        ret = pkgutil.iter_modules(models.__path__)
+        ret = (module[1] for module in ret if not module[2])
+        ret = ((name.title().replace('_', ''), name) for name in ret)
+        ret = ((cls, importlib.import_module('models.' + mod)) for cls, mod in ret)
+        ret = {cls: getattr(mod, cls) for cls, mod in ret}
+        print(ret)
+        return ret
         
     def do_quit(self, empty):
         """The quit command exits the interpreter immediately"""
