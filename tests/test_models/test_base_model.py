@@ -5,6 +5,9 @@
 import datetime
 from itertools import chain
 from models.base_model import BaseModel
+from models.engine.file_storage import FileStorage
+import os
+import os.path
 import unittest
 import uuid
 
@@ -29,6 +32,24 @@ class TestBase (unittest.TestCase):
             self.assertIsInstance(uuid.UUID(b.id), uuid.UUID)
         with self.subTest(msg='IDs are unique'):
             self.assertNotEqual(BaseModel().id, BaseModel().id)
+
+    def test_persistence(self):
+        """Test saving and loading data models to storage"""
+
+        if os.path.exists('storage.json'):
+            os.remove('storage.json')
+        storage = FileStorage()
+        storage.reload()
+        with self.subTest(msg='new models added to storage'):
+            obj = BaseModel()
+            self.assertTrue('BaseModel.' + obj.id in storage.all())
+        with self.subTest(msg='instances can be saved and loaded'):
+            obj.save()
+            old = obj.to_dict()
+            del obj, storage
+            storage = FileStorage()
+            storage.reload()
+            self.assertEqual(storage.all()['BaseModel.' + old['id']], old)
 
     def test_toDictionary(self):
         """Test converting to a dictionary using to_dict"""

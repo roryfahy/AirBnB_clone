@@ -2,6 +2,7 @@
 """Module for basemodel"""
 
 import datetime
+from models import storage
 import uuid
 
 
@@ -21,6 +22,7 @@ class BaseModel:
             self.id = str(uuid.uuid4())
             self.created_at = datetime.datetime.now()
             self.updated_at = datetime.datetime.now()
+            storage.new(self)
         else:
             del(kwargs['__class__'])
             kwargs['created_at'] = datetime.datetime.strptime(
@@ -47,6 +49,8 @@ class BaseModel:
         """Update the instance's update time"""
 
         self.updated_at = datetime.datetime.now()
+        storage.new(self)
+        storage.save()
 
     def to_dict(self):
         """Return this instance's attributes as a dict
