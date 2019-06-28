@@ -24,8 +24,11 @@ class TestBase (unittest.TestCase):
         """Test that the base model UUID is created properly"""
 
         b = BaseModel()
-        self.assertIsInstance(b.id, str)
-        self.assertIsInstance(uuid.UUID(b.id), uuid.UUID)
+        with self.subTest(msg='id is a UUID'):
+            self.assertIsInstance(b.id, str)
+            self.assertIsInstance(uuid.UUID(b.id), uuid.UUID)
+        with self.subTest(msg='IDs are unique'):
+            self.assertNotEqual(BaseModel().id, BaseModel().id)
 
     def test_toDictionary(self):
         """Test converting to a dictionary using to_dict"""
@@ -66,7 +69,7 @@ class TestBase (unittest.TestCase):
             now = datetime.datetime.now()
             self.assertTrue(old < b.updated_at < now)
 
-    def test_fromdict(self):
+    def test_fromDict(self):
         """Test that instances can be created from a given dictionary"""
 
         d = BaseModel().to_dict()
@@ -95,3 +98,7 @@ class TestBase (unittest.TestCase):
             for value in chain(c.__dict__.values(), e.__dict__.values()):
                 self.assertNotEqual('dfsa', value)
                 self.assertNotEqual('sfsd', value)
+        with self.subTest(msg='unknown attributes can be added'):
+            d['test'] = 5
+            b = BaseModel(**d)
+            self.assertEqual(b.test, 5)
