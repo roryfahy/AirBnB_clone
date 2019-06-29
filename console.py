@@ -79,6 +79,22 @@ class HBNBCommand (cmd.Cmd):
             ]
         self.__print(objects)
 
+    def do_count(self, line):
+        """Count the number of instances of a given class"""
+
+        if line == '':
+            self.__print('** class name missing **')
+            return
+        cls = line.partition(' ')[0]
+        if cls not in self.__classes:
+            self.__print('** class doesn\'t exist **')
+            return
+        count = 0
+        for key, obj in self.__storage.all().items():
+            if key.partition('.')[0] == cls:
+                count += 1
+        self.__print(count)
+
     def do_create(self, line):
         """Create a new data model instance and store it"""
 
@@ -137,7 +153,7 @@ class HBNBCommand (cmd.Cmd):
         if line == '':
             self.__print('** class name missing **')
             return
-        line = line.split(maxsplit=3)
+        line = line.split(maxsplit=4)
         if line[0] not in self.__classes:
             self.__print('** class doesn\'t exist **')
             return
@@ -154,8 +170,8 @@ class HBNBCommand (cmd.Cmd):
         if len(line) < 4:
             self.__print('** value missing **')
             return
-        value = line[3].partition('"')[2].partition('"')[0]
         obj = self.__storage.all()[key]
+        value = eval(line[3])
         if line[2] in obj:
             value = type(obj[line[2]])(value)
         obj[line[2]] = value
@@ -194,6 +210,43 @@ class HBNBCommand (cmd.Cmd):
             'Creates a new instance of the given data model class.',
             sep='\n'
         )
+
+    def special_update(self, cls, args):
+        """Update a data model instance using the advanced syntax"""
+
+        if cls == '':
+            self.__print('** class name missing **')
+            return
+        if cls not in self.__classes:
+            self.__print('** class doesn\'t exist **')
+            return
+        if len(args) < 1:
+            self.__print('** instance id missing **')
+            return
+        try:
+            key = cls + '.' + args[0]
+        except TypeError:
+            key = None
+        if key not in self.__storage.all():
+            self.__print('** no instance found **')
+            return
+        if len(args) < 2:
+            self.__print('** attribute name missing **')
+            return
+        if len(args) < 3 and not isinstance(args[1], dict):
+            self.__print('** value missing **')
+            return
+        if len(args) > 2:
+            obj = self.__storage.all()[key]
+            value = args[2]
+            if args[1] in obj:
+                value = type(obj[args[1]])(args[2])
+            obj[args[1]] = value
+            self.__storage.save()
+        else:
+            obj = self.__storage.all()[key]
+            obj.update(args[1])
+            self.__storage.save()
 
 if __name__ == '__main__':
     HBNBCommand().cmdloop()
