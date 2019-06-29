@@ -98,7 +98,7 @@ class HBNBCommand (cmd.Cmd):
         if cls not in self.__classes:
             self.__print('** class doesn\'t exist **')
             return
-        if id is None:
+        if id == '':
             self.__print('** instance id missing **')
             return
         key = cls + '.' + id
@@ -146,6 +146,11 @@ class HBNBCommand (cmd.Cmd):
         """The interpreter exits when EOF is reached on its input"""
 
         return 1
+
+    def emptyline(self):
+        """Do nothing if an empty line is typed"""
+
+        return 0
 
     def help_all(self):
         """Help for all command"""
