@@ -24,6 +24,7 @@ class HBNBCommand (cmd.Cmd):
         super().__init__(*args, **kwargs)
         self.prompt = '(hbnb) '
         self.__classes = self.__getModels()
+        self.__commands = [m[3:] for m in dir(self) if m.startswith('do_')]
         self.__print = functools.partial(print, file=self.stdout)
         self.__storage = FileStorage()
 
@@ -34,6 +35,29 @@ class HBNBCommand (cmd.Cmd):
         ret = ((cls, importlib.import_module('models.' + mod)) for cls, mod in ret)
         ret = {cls: getattr(mod, cls) for cls, mod in ret}
         return ret
+
+    def default(self, line):
+        """Check if the typed command looks like a Python method call"""
+
+        cls, _, piece = line.partition('.')
+        command, _, piece = piece.partition('(')
+        piece = '(' + piece.replace(')', ',)')
+        if piece != '(,)':
+            try:
+                piece = eval(piece)
+            except SyntaxError:
+                return super().default(line)
+        else:
+            piece = None
+        if command not in self.__commands:
+            return super().default(line)
+        if command == 'update':
+            self.special_update(cls, piece)
+        else:
+            line = command + ' ' + cls
+            if piece is not None:
+                line += ' ' + ' '.join(str(arg) for arg in piece)
+            self.onecmd(line)
 
     def do_all(self, line):
         """Print all data model objects, optionally filtered by class"""
