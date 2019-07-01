@@ -19,10 +19,13 @@ class TestStorage (unittest.TestCase):
     class TestModel:
         """Dummy data model"""
 
-        def __init__(self, includeClass=True):
+        def __init__(self, *args, includeClass=True, **kwargs):
             """Initialize dummy instance, optionally omitting __class__"""
 
             self.__includeClass = includeClass
+            for name, value in kwargs.items():
+                if name != '__class__':
+                    setattr(self, name, value)
 
         def to_dict(self):
             """Return this instance dictionary"""
@@ -30,6 +33,7 @@ class TestStorage (unittest.TestCase):
             ret = dict(self.__dict__)
             if self.__includeClass:
                 ret['__class__'] = 'TestModel'
+            del ret['_TestModel__includeClass']
             return ret
 
     def setUp(self):
@@ -39,14 +43,26 @@ class TestStorage (unittest.TestCase):
             os.remove('storage.json')
         importlib.reload(models.engine.file_storage)
 
+    @classmethod
+    def setUpClass(cls):
+        """Allow importing TestModels"""
+
+        models.classes['TestModel'] = TestStorage.TestModel
+
+    def tearDown(self):
+        """Remove the JSON file after each test"""
+
+        if os.path.exists('storage.json'):
+            os.remove('storage.json')
+
     def test_corruptFile(self):
         """Test failures when JSON file is incorrect"""
         contents = {
             'BaseModel.123': {
                 '__class__': 'BaseModel',
-                'created_at': '2019-06-27T15:55:30.0',
+                'created_at': '2019-06-27T15:55:30.100000',
                 'id': '123',
-                'updated_at': '2019-07-27T15:56:30.0'
+                'updated_at': '2019-07-27T15:56:30.100000'
             },
             'wrong': ['stuff in', 'a', 'list']
         }
@@ -54,8 +70,7 @@ class TestStorage (unittest.TestCase):
         with self.subTest(msg='dictionary contains non instances'):
             with open('storage.json', 'wt') as file:
                 json.dump(contents, file)
-            storage.reload()
-            self.assertEqual(storage.all(), contents)
+            self.assertRaises(KeyError, storage.reload)
         with self.subTest(msg='non json contents'):
             contents = 'this is a string, not json'
             with open('storage.json', 'wt') as file:
@@ -77,19 +92,22 @@ class TestStorage (unittest.TestCase):
             contents = {
                 'BaseModel.123': {
                     '__class__': 'BaseModel',
-                    'created_at': '2019-06-27T15:55:30.0',
+                    'created_at': '2019-06-27T15:55:30.100000',
                     'id': '123',
-                    'updated_at': '2019-07-27T15:56:30.0'
+                    'updated_at': '2019-07-27T15:56:30.100000'
                 }
             }
             with open('storage.json', 'wt') as file:
                 json.dump(contents, file)
             storage.reload()
             name = 'BaseModel.123'
-            self.assertEqual(storage.all()[name], contents[name])
+            self.assertEqual(
+                storage.get('BaseModel', '123').to_dict(),
+                contents[name]
+            )
         with self.subTest(msg='load multiple objects'):
-            contents['OtherData.456'] = {
-                '__class__': 'NotAClass',
+            contents['TestModel.456'] = {
+                '__class__': 'TestModel',
                 'other': 25,
                 'crazy': 'in the membrane'
             }
@@ -97,9 +115,15 @@ class TestStorage (unittest.TestCase):
                 json.dump(contents, file)
             storage.reload()
             name = 'BaseModel.123'
-            self.assertEqual(storage.all()[name], contents[name])
-            name = 'OtherData.456'
-            self.assertEqual(storage.all()[name], contents[name])
+            self.assertEqual(
+                storage.get('BaseModel', '123').to_dict(),
+                contents[name]
+            )
+            name = 'TestModel.456'
+            self.assertEqual(
+                storage.get('TestModel', '456').to_dict(),
+                contents[name]
+            )
 
     def test_save(self):
         """Test saving objects to the file"""
@@ -139,13 +163,8 @@ class TestStorage (unittest.TestCase):
             self.assertRaises(AttributeError, storage.new, 'not data')
         with self.subTest(msg='mandatory attributes invalid'):
             obj = TestStorage.TestModel(False)
-            self.assertRaises(KeyError, storage.new, obj)
+            self.assertRaises(AttributeError, storage.new, obj)
             obj = TestStorage.TestModel(True)
-            self.assertRaises(KeyError, storage.new, obj)
+            self.assertRaises(AttributeError, storage.new, obj)
             obj.id = '123'
-            obj = TestStorage.TestModel(False)
-            obj.id = '123'
-            self.assertRaises(KeyError, storage.new, obj)
             obj = TestStorage.TestModel(True)
-            obj.id = 123
-            self.assertRaises(TypeError, storage.new, obj)
