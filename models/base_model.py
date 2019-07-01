@@ -49,7 +49,7 @@ class BaseModel:
         """Update the instance's update time"""
 
         self.updated_at = datetime.datetime.now()
-        storage.new(self)
+        storage.get(type(self), self.id).updated_at = self.updated_at
         storage.save()
 
     def to_dict(self):

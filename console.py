@@ -2,39 +2,22 @@
 """Module for command interpreter class"""
 
 
+from ast import literal_eval
 import cmd
 import functools
 import models
-from models.engine.file_storage import FileStorage
-import pkgutil
-import importlib
 
 
 class HBNBCommand (cmd.Cmd):
-    """Interpret commands for a pseudo-API in the AirBnB clone
-
-    Attributes:
-        print (functools.partial): print with this interpreter's output stream
-
-    """
+    """Interpret commands for a pseudo-API in the AirBnB clone"""
 
     def __init__(self, *args, **kwargs):
         """create the interpreter with a given data model and save it"""
 
         super().__init__(*args, **kwargs)
         self.prompt = '(hbnb) '
-        self.__classes = self.__getModels()
         self.__commands = [m[3:] for m in dir(self) if m.startswith('do_')]
         self.__print = functools.partial(print, file=self.stdout)
-        self.__storage = FileStorage()
-
-    def __getModels(self):
-        ret = pkgutil.iter_modules(models.__path__)
-        ret = (module[1] for module in ret if not module[2])
-        ret = ((name.title().replace('_', ''), name) for name in ret)
-        ret = ((cls, importlib.import_module('models.' + mod)) for cls, mod in ret)
-        ret = {cls: getattr(mod, cls) for cls, mod in ret}
-        return ret
 
     def default(self, line):
         """Check if the typed command looks like a Python method call"""
@@ -44,7 +27,7 @@ class HBNBCommand (cmd.Cmd):
         piece = '(' + piece.replace(')', ',)')
         if piece != '(,)':
             try:
-                piece = eval(piece)
+                piece = literal_eval(piece)
             except SyntaxError:
                 return super().default(line)
         else:
@@ -53,31 +36,36 @@ class HBNBCommand (cmd.Cmd):
             return super().default(line)
         if command == 'update':
             self.special_update(cls, piece)
+        elif command == 'all':
+            self.do_all(cls, quote_objs=False)
         else:
             line = command + ' ' + cls
             if piece is not None:
                 line += ' ' + ' '.join(str(arg) for arg in piece)
             self.onecmd(line)
 
-    def do_all(self, line):
+    def do_all(self, line, quote_objs=True):
         """Print all data model objects, optionally filtered by class"""
 
         cls = line.partition(' ')[0]
         if cls == '':
             objects = [
-                str(self.__classes[k.partition('.')[0]](**v))
-                for k, v in self.__storage.all().items()
+                str(models.classes[k.partition('.')[0]](**v.to_dict()))
+                for k, v in models.storage.all().items()
             ]
         else:
-            if cls not in self.__classes:
+            if cls not in models.classes:
                 self.__print('** class doesn\'t exist **')
                 return
             objects = [
-                str(self.__classes[cls](**v))
-                for k, v in self.__storage.all().items()
+                str(models.classes[cls](**v.to_dict()))
+                for k, v in models.storage.all().items()
                 if k.partition('.')[0] == cls
             ]
-        self.__print(objects)
+        if quote_objs:
+            self.__print(objects)
+        else:
+            self.__print('[' + ', '.join(str(obj) for obj in objects) + ']')
 
     def do_count(self, line):
         """Count the number of instances of a given class"""
@@ -86,11 +74,11 @@ class HBNBCommand (cmd.Cmd):
             self.__print('** class name missing **')
             return
         cls = line.partition(' ')[0]
-        if cls not in self.__classes:
+        if cls not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
         count = 0
-        for key, obj in self.__storage.all().items():
+        for key, obj in models.storage.all().items():
             if key.partition('.')[0] == cls:
                 count += 1
         self.__print(count)
@@ -102,11 +90,11 @@ class HBNBCommand (cmd.Cmd):
         if cls == '':
             self.__print('** class name missing **')
             return
-        if cls not in self.__classes:
+        if cls not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
-        self.__storage.new(self.__classes[cls]())
-        self.__storage.save()
+        models.classes[cls]()
+        models.storage.save()
 
     def do_destroy(self, line):
         """Destroy an existing data model instance"""
@@ -115,18 +103,17 @@ class HBNBCommand (cmd.Cmd):
         if cls == '':
             self.__print('** class name missing **')
             return
-        if cls not in self.__classes:
+        if cls not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
-        if id is None:
+        if id == '':
             self.__print('** instance id missing **')
             return
-        key = cls + '.' + id
-        if key not in self.__storage.all():
+        if models.storage.tryGet(cls, id, None) is None:
             self.__print('** no instance found **')
             return
-        del self.__storage.all()[key]
-        self.__storage.save()
+        models.storage.delete(cls, id)
+        models.storage.save()
 
     def do_show(self, line):
         """print string representation of an instance"""
@@ -135,17 +122,17 @@ class HBNBCommand (cmd.Cmd):
         if cls == '':
             self.__print('** class name missing **')
             return
-        if cls not in self.__classes:
+        if cls not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
         if id == '':
             self.__print('** instance id missing **')
             return
-        key = cls + '.' + id
-        if key not in self.__storage.all():
+        obj = models.storage.tryGet(cls, id, None)
+        if obj is None:
             self.__print('** no instance found **')
             return
-        print(self.__classes[cls](**self.__storage.all()[key]))
+        self.__print(obj)
 
     def do_update(self, line):
         """Update or add an attribute to a data model instance"""
@@ -153,15 +140,15 @@ class HBNBCommand (cmd.Cmd):
         if line == '':
             self.__print('** class name missing **')
             return
-        line = line.split(maxsplit=4)
-        if line[0] not in self.__classes:
+        line = line.split(maxsplit=3)
+        if line[0] not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
         if len(line) < 2:
             self.__print('** instance id missing **')
             return
-        key = line[0] + '.' + line[1]
-        if key not in self.__storage.all():
+        obj = models.storage.tryGet(line[0], line[1], None)
+        if obj is None:
             self.__print('** no instance found **')
             return
         if len(line) < 3:
@@ -170,12 +157,14 @@ class HBNBCommand (cmd.Cmd):
         if len(line) < 4:
             self.__print('** value missing **')
             return
-        obj = self.__storage.all()[key]
-        value = eval(line[3])
-        if line[2] in obj:
-            value = type(obj[line[2]])(value)
-        obj[line[2]] = value
-        self.__storage.save()
+        if line[3].startswith('"'):
+            value = line[3].partition('"')[2].partition('"')[0]
+        else:
+            value = literal_eval(line[3].partition(' ')[0])
+        if hasattr(obj, line[2]):
+            value = type(getattr(obj, line[2]))(value)
+        setattr(obj, line[2], value)
+        obj.save()
 
     def do_quit(self, empty):
         """The quit command exits the interpreter immediately"""
@@ -217,17 +206,14 @@ class HBNBCommand (cmd.Cmd):
         if cls == '':
             self.__print('** class name missing **')
             return
-        if cls not in self.__classes:
+        if cls not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
         if len(args) < 1:
             self.__print('** instance id missing **')
             return
-        try:
-            key = cls + '.' + args[0]
-        except TypeError:
-            key = None
-        if key not in self.__storage.all():
+        obj = models.storage.tryGet(cls, args[0], None)
+        if obj is None:
             self.__print('** no instance found **')
             return
         if len(args) < 2:
@@ -237,16 +223,15 @@ class HBNBCommand (cmd.Cmd):
             self.__print('** value missing **')
             return
         if len(args) > 2:
-            obj = self.__storage.all()[key]
             value = args[2]
-            if args[1] in obj:
-                value = type(obj[args[1]])(args[2])
-            obj[args[1]] = value
-            self.__storage.save()
+            if hasattr(obj, args[1]):
+                value = type(getattr(obj, args[1]))(args[2])
+            setattr(obj, args[1], value)
         else:
-            obj = self.__storage.all()[key]
-            obj.update(args[1])
-            self.__storage.save()
+            for name, value in args[1].items():
+                setattr(obj, name, value)
+        obj.save()
+
 
 if __name__ == '__main__':
     HBNBCommand().cmdloop()
