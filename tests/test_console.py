@@ -3,6 +3,7 @@
 
 
 import console
+import functools
 import importlib
 import io
 import models.engine.file_storage
@@ -26,6 +27,8 @@ class TestConsole (unittest.TestCase):
             stdin=TestConsole.i,
             stdout=TestConsole.o
         )
+        TestConsole.cmd._HBNBCommand__print = \
+            functools.partial(print, file=TestConsole.cmd.stdout)
 
     def tearDown(self):
         """Remove the JSON file after each test"""
