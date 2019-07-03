@@ -176,6 +176,7 @@ class HBNBCommand (cmd.Cmd):
     def do_EOF(self, empty):
         """The interpreter exits when EOF is reached on its input"""
 
+        self.__print()
         return 1
 
     def emptyline(self):
