@@ -18,7 +18,7 @@ class HBNBCommand (cmd.Cmd):
         self.prompt = '(hbnb) '
         self.use_rawinput = False
         self.__commands = [m[3:] for m in dir(self) if m.startswith('do_')]
-        self.__print = functools.partial(print, file=self.stdout)
+        self.__print = print
 
     def default(self, line):
         """Check if the typed command looks like a Python method call"""
