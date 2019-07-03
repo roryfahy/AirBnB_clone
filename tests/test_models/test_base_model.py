@@ -18,7 +18,7 @@ class TestBase (unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         """Set up which data model to test"""
-        
+
         super().__init__(*args, **kwargs)
         self._cls = BaseModel
         self._name = 'BaseModel'

@@ -29,7 +29,7 @@ class TestStorage (unittest.TestCase):
 
         def to_dict(self):
             """Return this instance dictionary"""
-            
+
             ret = dict(self.__dict__)
             if self.__includeClass:
                 ret['__class__'] = 'TestModel'

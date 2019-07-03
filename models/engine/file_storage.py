@@ -29,7 +29,7 @@ class FileStorage (Storage):
         if isinstance(obj, str):
             return obj in FileStorage.__objects
         return key(type(obj), obj.id) in FileStorage.__objects
-    
+
     def all(self):
         """return __objects dictionary"""
         return FileStorage.__objects
