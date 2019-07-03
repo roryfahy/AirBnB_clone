@@ -16,6 +16,7 @@ class HBNBCommand (cmd.Cmd):
 
         super().__init__(*args, **kwargs)
         self.prompt = '(hbnb) '
+        self.use_rawinput = False
         self.__commands = [m[3:] for m in dir(self) if m.startswith('do_')]
         self.__print = functools.partial(print, file=self.stdout)
 
@@ -93,8 +94,9 @@ class HBNBCommand (cmd.Cmd):
         if cls not in models.classes:
             self.__print('** class doesn\'t exist **')
             return
-        models.classes[cls]()
+        obj = models.classes[cls]()
         models.storage.save()
+        self.__print(obj.id)
 
     def do_destroy(self, line):
         """Destroy an existing data model instance"""
