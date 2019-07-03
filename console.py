@@ -111,6 +111,7 @@ class HBNBCommand (cmd.Cmd):
         if id == '':
             self.__print('** instance id missing **')
             return
+        id = id.partition(' ')[0]
         if models.storage.tryGet(cls, id, None) is None:
             self.__print('** no instance found **')
             return
@@ -130,6 +131,7 @@ class HBNBCommand (cmd.Cmd):
         if id == '':
             self.__print('** instance id missing **')
             return
+        id = id.partition(' ')[0]
         obj = models.storage.tryGet(cls, id, None)
         if obj is None:
             self.__print('** no instance found **')
