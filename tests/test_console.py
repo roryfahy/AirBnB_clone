@@ -53,7 +53,6 @@ class TestConsole (unittest.TestCase):
         self.o.seek(start)
         return self.o.read(end - start)
 
-
     def test_all(self):
         """all command"""
 
@@ -120,9 +119,9 @@ class TestConsole (unittest.TestCase):
         """create command"""
 
         with self.subTest(msg='valid class'):
-            self.assertWrites('', 'create State')
+            self.cmd.onecmd('create State')
             self.assertEqual(len(models.storage.all()), 1)
-            self.assertWrites('', 'State.create()')
+            self.cmd.onecmd('State.create()')
             self.assertEqual(len(models.storage.all()), 2)
             classes = []
             for key in models.storage.all():
@@ -168,7 +167,7 @@ class TestConsole (unittest.TestCase):
         self.cmd.cmdloop()
         end = self.o.tell()
         self.o.seek(start)
-        self.assertEqual(self.o.read(end - start), '(hbnb) ')
+        self.assertEqual(self.o.read(end - start), '(hbnb) \n')
 
     def test_show(self):
         """show command"""
@@ -221,8 +220,12 @@ class TestConsole (unittest.TestCase):
         self.assertWrites("** class name missing **\n", "update")
         self.assertWrites("** class doesn't exist **\n", "update MyModel")
         self.assertWrites("** instance id missing **\n", "update BaseModel")
-        self.assertWrites("** no instance found **\n", "update BaseModel notanid")
+        self.assertWrites("** no instance found **\n",
+                          "update BaseModel notanid")
         id = self.cls_id('create BaseModel')
-        self.assertWrites("** attribute name missing **\n", "update BaseModel {}".format(id))
-        self.assertWrites("** value missing **\n", "update BaseModel {} first_name".format(id))
-        self.assertWrites("", 'update BaseModel {} first_name "betty" extra stuff at the end'.format(id))
+        self.assertWrites("** attribute name missing **\n",
+                          "update BaseModel {}".format(id))
+        self.assertWrites("** value missing **\n",
+                          "update BaseModel {} first_name".format(id))
+        self.assertWrites("",
+                          'update BaseModel {} first_name "bet" ex'.format(id))
