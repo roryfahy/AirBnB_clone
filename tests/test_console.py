@@ -247,7 +247,7 @@ class TestConsole (unittest.TestCase):
         self.assertWrites("** instance id missing **\n", "update BaseModel")
         self.assertWrites("** no instance found **\n",
                           "update BaseModel notanid")
-        id = self.cls_id('create BaseModel')
+        id = self.capture('create BaseModel')
         self.assertWrites("** attribute name missing **\n",
                           "update BaseModel {}".format(id))
         self.assertWrites("** value missing **\n",
