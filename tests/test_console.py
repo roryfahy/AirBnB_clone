@@ -6,6 +6,7 @@ import console
 import functools
 import importlib
 import io
+import models
 import models.engine.file_storage
 import os
 import os.path
@@ -47,7 +48,7 @@ class TestConsole (unittest.TestCase):
         actual = self.o.read(end - start)
         self.assertEqual(actual, expected)
 
-    def cls_id(self, command):
+    def capture(self, command):
         """Check if a command causes some text to be written"""
 
         start = self.o.tell()
@@ -62,40 +63,61 @@ class TestConsole (unittest.TestCase):
         with self.subTest(msg='no content'):
             self.assertWrites('[]\n', 'all')
         with self.subTest(msg='no content with filter'):
-            self.cmd.onecmd('create BaseModel')
-            self.assertWrites('[]\n', 'all State')
+            for fake in models.classes.keys():
+                for real in models.classes.keys():
+                    if real != fake:
+                        self.cmd.onecmd('create ' + real)
+                        self.cmd.onecmd('create ' + real)
+                self.assertWrites('[]\n', 'all ' + fake)
+                self.assertWrites('[]\n', fake + '.all()')
+                models.storage.all().clear()
         with self.subTest(msg='one object'):
-            objs = []
-            for key, obj in models.storage.all().items():
-                objs.append(obj)
-            expected = str([str(o) for o in objs]) + '\n'
-            self.assertWrites(expected, 'all')
+            for cls in models.classes.keys():
+                id = self.capture('create ' + cls)[:-1]
+                expected = str([str(models.storage.get(cls, id))]) + '\n'
+                self.assertWrites(expected, 'all')
+                models.storage.all().clear()
         with self.subTest(msg='one object with filter'):
-            self.cmd.onecmd('create State')
-            objs = []
-            for key, obj in models.storage.all().items():
-                if key.partition('.')[0] == 'BaseModel':
-                    objs.append(obj)
-            expected = str([str(o) for o in objs]) + '\n'
-            self.assertWrites(expected, 'all BaseModel')
-            expected = '[' + ', '.join(str(o) for o in objs) + ']\n'
-            self.assertWrites(expected, 'BaseModel.all()')
+            for real in models.classes.keys():
+                id = self.capture('create ' + real)[:-1]
+                expected = str([str(models.storage.get(real, id))]) + '\n'
+                self.assertWrites(expected, 'all ' + real)
+                expected = '[' + str(models.storage.get(real, id)) + ']\n'
+                self.assertWrites(expected, real + '.all()')
+                models.storage.all().clear()
+            for real in models.classes.keys():
+                for fake in models.classes.keys():
+                    if real != fake:
+                        self.cmd.onecmd('create ' + fake)
+                        self.cmd.onecmd('create ' + fake)
+                id = self.capture('create ' + real)[:-1]
+                expected = str([str(models.storage.get(real, id))]) + '\n'
+                self.assertWrites(expected, 'all ' + real)
+                expected = '[' + str(models.storage.get(real, id)) + ']\n'
+                self.assertWrites(expected, real + '.all()')
+                models.storage.all().clear()
         with self.subTest(msg='multiple objects'):
-            objs = []
-            for key, obj in models.storage.all().items():
-                objs.append(obj)
+            for cls in models.classes.keys():
+                self.cmd.onecmd('create ' + cls)
+                self.cmd.onecmd('create ' + cls)
+            objs = list(models.storage.all().values())
             expected = str([str(o) for o in objs]) + '\n'
             self.assertWrites(expected, 'all')
+            models.storage.all().clear()
         with self.subTest(msg='multiple objects with filter'):
-            self.cmd.onecmd('create State')
-            objs = []
-            for key, obj in models.storage.all().items():
-                if key.partition('.')[0] == 'State':
-                    objs.append(obj)
-            expected = str([str(o) for o in objs]) + '\n'
-            self.assertWrites(expected, 'all State')
-            expected = '[' + ', '.join(str(o) for o in objs) + ']\n'
-            self.assertWrites(expected, 'State.all()')
+            for cls in models.classes.keys():
+                self.cmd.onecmd('create ' + cls)
+                self.cmd.onecmd('create ' + cls)
+            for name, cls in models.classes.items():
+                objs = [
+                    o
+                    for o in models.storage.all().values()
+                    if type(o) is cls
+                ]
+                expected = str([str(o) for o in objs]) + '\n'
+                self.assertWrites(expected, 'all ' + name)
+                expected = '[' + ', '.join(str(o) for o in objs) + ']\n'
+                self.assertWrites(expected, name + '.all()')
 
     def test_allErrors(self):
         """Errors with the all command"""
