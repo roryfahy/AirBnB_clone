@@ -4,10 +4,8 @@
     width: 100%;
     border: 1px #DDDDDD solid;
     border-radius: 4px;
-    display: flex;
     align-items: center;
-    justify-content: right;
-
+    display: flex;
 }
 
 .filters button {
@@ -18,6 +16,7 @@
     width: 20%;
     border-radius: 4px;
     text-align: center;
+    margin-left: auto;
     margin-right: 30px
 }
 
