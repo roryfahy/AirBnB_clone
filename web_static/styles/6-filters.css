@@ -56,7 +56,7 @@
     position: absolute;
     top: 100%;
     padding-bottom: 35px;
-    #visibility: hidden;
+    visibility: hidden;
     width: 100%;
     
 }
