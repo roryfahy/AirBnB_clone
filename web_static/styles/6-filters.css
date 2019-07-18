@@ -55,7 +55,8 @@
     margin: 0;
     position: absolute;
     top: 100%;
-    padding-bottom: 35px;
+    padding-top: 10%;
+    padding-bottom: 10%;
     visibility: hidden;
     width: 100%;
     
